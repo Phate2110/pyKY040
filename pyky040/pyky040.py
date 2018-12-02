@@ -69,60 +69,65 @@ class Encoder:
 
     # def def_chg_callback(self, callback):
     #     self.chg_callback = callback
+    
+    def edgecallback(self, channel):
+        
+        try:
 
+            # Encoder part
+            clkState = GPIO.input(self.clk)
+            dtState = GPIO.input(self.dt)
+            if dtState != clkState:
+
+                if self.counter + self.step <= self.max_counter:
+                    # Loop or not, increment if the max isn't reached
+                    self.counter += self.step
+                elif (self.counter + self.step >= self.max_counter) and self.counter_loop is True:
+                    # If loop, go back to min once max is reached
+                    self.counter = self.min_counter
+
+                if self.inc_callback is not None:
+                    self.inc_callback(self.counter)
+                if self.chg_callback is not None:
+                    self.chg_callback(self.counter)
+
+            else:
+
+                if self.counter - self.step >= self.min_counter:
+                    # Same as for max ^
+                    self.counter -= self.step
+                elif (self.counter - self.step <= self.min_counter) and self.counter_loop is True:
+                    # If loop, go back to max once min is reached
+                    self.counter = self.max_counter
+
+                if self.dec_callback is not None:
+                    self.dec_callback(self.counter)
+                if self.chg_callback is not None:
+                    self.chg_callback(self.counter)
+
+            self.clkLastState = clkState
+            sleep(self.polling_interval / 1000)
+        except BaseException as e:
+            logger.info("Exiting...")
+            logger.info(e)
+            GPIO.cleanup()
+    
+    def swCallBack(self, channel):
+        if GPIO.input(self.sw) == GPIO.LOW:
+            self.sw_callback()
+    
     def watch(self):
 
-        swTriggered = False  # Used to debounce a long switch click (prevent multiple callback calls)
-
+        
+        latest_switch_call = None
+        GPIO.add_event_detect(self.clk, GPIO.BOTH, callback=self.edgecallback)
+        # Switch part
+        if self.sw_callback:
+            GPIO.add_event_detect(self.sw, GPIO.RISING, callback=self.swCallBack)
+        
+           
         while True:
-            try:
-                # Switch part
-                if self.sw_callback:
-                    if GPIO.input(self.sw) == GPIO.LOW:
-                        if not swTriggered:
-                            self.sw_callback()
-                        swTriggered = True
-                    else:
-                        swTriggered = False
-                # Encoder part
-                clkState = GPIO.input(self.clk)
-                dtState = GPIO.input(self.dt)
-
-                if clkState != self.clkLastState:
-
-                    if dtState != clkState:
-
-                        if self.counter + self.step <= self.max_counter:
-                            # Loop or not, increment if the max isn't reached
-                            self.counter += self.step
-                        elif (self.counter + self.step >= self.max_counter) and self.counter_loop is True:
-                            # If loop, go back to min once max is reached
-                            self.counter = self.min_counter
-
-                        if self.inc_callback is not None:
-                            self.inc_callback(self.counter)
-                        if self.chg_callback is not None:
-                            self.chg_callback(self.counter)
-
-                    else:
-
-                        if self.counter - self.step >= self.min_counter:
-                            # Same as for max ^
-                            self.counter -= self.step
-                        elif (self.counter - self.step <= self.min_counter) and self.counter_loop is True:
-                            # If loop, go back to max once min is reached
-                            self.counter = self.max_counter
-
-                        if self.dec_callback is not None:
-                            self.dec_callback(self.counter)
-                        if self.chg_callback is not None:
-                            self.chg_callback(self.counter)
-
-                self.clkLastState = clkState
-                sleep(self.polling_interval / 1000)
-            except BaseException as e:
-                logger.info("Exiting...")
-                logger.info(e)
-                GPIO.cleanup()
-                break
+            sleep(60)
         return
+
+  
