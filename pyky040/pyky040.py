@@ -39,15 +39,16 @@ class Encoder:
 
     def setup(self, **params):
 
-        # Note: boundaries are inclusive : [min_c, max_c]
-
-        if 'loop' in params and params['loop'] is True:
+       if 'loop' in params and params['loop'] is True:
             self.counter_loop = True
         else:
             self.counter_loop = False
 
         self.min_counter = params['scale_min']
-        self.counter = self.min_counter + 0
+        if 'startat' in params:
+            self.counter = params['startat']
+        else:
+            self.counter = self.min_counter + 0
         self.max_counter = params['scale_max']
 
         if 'step' in params:
@@ -60,6 +61,8 @@ class Encoder:
             self.chg_callback = params['chg_callback']
         if 'sw_callback' in params:
             self.sw_callback = params['sw_callback']
+        if 'sw_debounce_time' in params:
+            self.sw_debounce_time = params['sw_debounce_time']
 
     # def def_inc_callback(self, callback):
     #     self.inc_callback = callback
